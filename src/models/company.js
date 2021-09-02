@@ -12,7 +12,9 @@ const companySchema =new mongoose.Schema({
     //pay schedule
     payDate : String,
     payRollStartFrom : String,
-
+    workdays  : Array,
+    workHours  : Number,
+    
     //tax details
     pan : String,
     tan : String,
@@ -26,14 +28,10 @@ const companySchema =new mongoose.Schema({
     proftax : String,
 
     //earnings and reimbursment
-    earningsDocArray : [{
-        earningType : String,
-        amount : Number
-    }],
-    reimbursmentArray : [{
-        type:String,
-        amount:Number,
-    }],
+    earningsDocArray : Array,
+    reimbursmentArray : Array,
+    employeeNetPay : Number,
+    employeeCount : Number,
     logArray : Array
 
 },{timestamps: true})

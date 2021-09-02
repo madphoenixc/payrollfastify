@@ -23,7 +23,7 @@ const fastify = require('fastify')({
   
   const start = async () => {
     try{
-        await fastify.listen(8000,'0.0.0.0')
+        await fastify.listen(process.env.PORT,'0.0.0.0')
         fastify.log.info(`Server is running at ${address}`)
     }catch (error){
   
