@@ -1,11 +1,33 @@
 const Employee = require("../models/employee")
+const Company = require("../models/company")
+
 
 exports.createEmployee = async (req, reply) => { 
     try { 
         const employee = new Employee(req.body)   
-        console.log(employee)    
+        
+        //earnings calculation
+        const company=await Company.findById(employee.companyId)
+        var earnings=0;
+        for (const earning in company.earningsDocArray) {
+            earnings+=Number(company.earningsDocArray[earning].amount);
+          }
+        console.log(earnings);
+
+        //salary calculation
+        employee.salary=earnings+Number(employee.basicPay);
+        console.log(employee);
         employee.save()
-        reply.send({employee,"message":'Employee Created'}) 
+        
+        //updating company emp count and emp netpay
+        var updatedObj={
+            employeeCount:company.employeeCount+1,
+            employeeNetPay:company.employeeNetPay+employee.salary
+        }
+        
+        const updatedCompany = await Company.findByIdAndUpdate(employee.companyId,{ $set: updatedObj},{new:true,useFindAndModify:false})
+        const allEmployee=await Employee.find({companyId:employee.companyId});
+        reply.send({employee,updatedCompany,allEmployee,"message":'Employee Created'}) 
     } 
     catch(error){
         reply.send ({ "error" : 'Creation Failed' })    
@@ -76,9 +98,31 @@ exports.viewEmployeeEmail = async (req,reply) => {
 exports.editEmployee= async (req,reply)=>{
     try{
         const id = req.params.id;
+        //fetching previous details
+        var employee= await Employee.findById(id)
+        //geting updated details  from user
         const updatedEmployee = await Employee.findByIdAndUpdate(id,{ $set:req.body},{new:true,useFindAndModify:false}) 
-        if(employee){
-            reply.send({updatedEmployee,"message":"Your Company Is Updated Successfully"})
+        //altering company netpay according to updated employee details(basicpay)
+        if(updatedEmployee){
+            var company=await Company.findById(updatedEmployee.companyId)
+            if(updatedEmployee.basicPay >= employee.basicPay)
+            {
+                var diff= updatedEmployee.basicPay - employee.basicPay;
+                var updatedObj={
+                    employeeNetPay:company.employeeNetPay + diff
+                }
+                              
+            }
+            else{
+                var diff= employee.basicPay - updatedEmployee.basicPay ;
+                var updatedObj={
+                    employeeNetPay:company.employeeNetPay - diff
+                } 
+            }
+            //updating company table
+            const updatedCompany = await Company.findByIdAndUpdate(updatedEmployee.companyId,{ $set: updatedObj},{new:true,useFindAndModify:false})
+            const allEmployee=await Employee.find({companyId:updatedEmployee.companyId});
+            reply.send({updatedEmployee,allEmployee,"message":"Your Company Is Updated Successfully"})
         }    
         else{
         reply.send ({ "error" : 'No Company Found' })   
@@ -94,8 +138,16 @@ exports.deleteEmployee = async (req,reply)=>{
         const id=req.params.id;
         const deletedEmployee=await Employee.findByIdAndRemove(id,{new:true,useFindAndModify:false})
         console.log("delete");      
-        if(employee){
-            reply.send({deletedEmployee,"message":"Your company is deleted successfully"});
+        if(deletedEmployee){
+            var company=await Company.findById(deletedEmployee.companyId)
+            var updatedObj={
+                employeeCount:company.employeeCount-1,
+                employeeNetPay:company.employeeNetPay-deletedEmployee.salary
+            }           
+            const updatedCompany = await Company.findByIdAndUpdate(deletedEmployee.companyId,{ $set: updatedObj},{new:true,useFindAndModify:false})
+            console.log(updatedCompany)
+            const allEmployee=await Employee.find({companyId:deletedEmployee.companyId});
+            reply.send({updatedCompany,deletedEmployee,allEmployee,"message":"Your company is deleted successfully"});
         }    
         else{
         reply.send ({ "error" : 'No Company Found' })   
